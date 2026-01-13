@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Smart Agriculture</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1 data-i18n="admin_analytics">🛡️ Admin Analytics Dashboard</h1>
+            <div class="header-right">
+                <!-- Custom Language Switcher -->
+                <div class="language-pill" onclick="toggleProfileMenu()">
+                    <span id="currentLangIcon">🇺🇸</span>
+                    <span id="currentLangLabel">EN</span>
+                </div>
+
+                <!-- Profile Management -->
+                <div class="profile-container">
+                    <div class="profile-trigger" onclick="toggleProfileMenu()">
+                        <div class="avatar" id="userAvatar">A</div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div class="dropdown-header">
+                            <div id="dropdownName" style="font-weight:bold;">Admin User</div>
+                            <div id="dropdownEmail" class="email">admin@field.com</div>
+                        </div>
+
+                        <div style="padding: 5px 0;">
+                            <div class="dropdown-item" onclick="changeLanguage('en')">
+                                <span class="lang-option">English 🇺🇸 <i class="fas fa-check" id="check-en"></i></span>
+                            </div>
+                            <div class="dropdown-item" onclick="changeLanguage('ta')">
+                                <span class="lang-option">தமிழ் 🇮🇳 <i class="fas fa-check" id="check-ta"
+                                        style="display:none;"></i></span>
+                            </div>
+                        </div>
+
+                        <hr style="border:0; border-top:1px solid #eee; margin: 5px 0;">
+
+                        <button class="dropdown-item" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Farmers</h3>
+                <div class="value" id="totalFarmers">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Plots</h3>
+                <div class="value" id="totalPlots">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>System Alerts</h3>
+                <div class="value" id="totalAlerts">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>Primary Crop</h3>
+                <div class="value" id="commonCrop" style="font-size: 1.5em; color: #2e7d32;">--</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top:20px;">
+            <div class="card">
+                <h3>Alert Generation Trend (Daily)</h3>
+                <canvas id="alertTrendChart"></canvas>
+            </div>
+            <div class="card">
+                <h3>Most Affected Crops</h3>
+                <canvas id="affectedCropsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+        if (!checkAuth()) { }
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user.role !== 'admin') window.location.href = 'farmer_dashboard.html';
+
+        let translations = {};
+
+        async function init() {
+            // Setup Profile UI
+            const name = user.full_name || user.name || 'Admin';
+            document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+            document.getElementById('dropdownName').textContent = name;
+            document.getElementById('dropdownEmail').textContent = user.email || (user.username + '@admin.com');
+
+            // Language Init
+            const savedLang = localStorage.getItem('lang') || 'en';
+            updateLangUI(savedLang);
+            await loadTranslations(savedLang);
+            loadAdminStats();
+
+            // Close dropdown on outside click
+            window.addEventListener('click', (e) => {
+                if (!e.target.closest('.profile-container') && !e.target.closest('.language-pill')) {
+                    document.getElementById('profileDropdown').classList.remove('active');
+                }
+            });
+        }
+
+        function toggleProfileMenu() {
+            document.getElementById('profileDropdown').classList.toggle('active');
+        }
+
+        async function loadTranslations(lang) {
+            try {
+                const res = await fetch(`../locales/${lang}.json`);
+                translations = await res.json();
+                applyTranslations();
+                localStorage.setItem('lang', lang);
+                updateLangUI(lang);
+            } catch (e) { console.error('Lang load error', e); }
+        }
+
+        function updateLangUI(lang) {
+            const isEn = lang === 'en';
+            document.getElementById('currentLangIcon').textContent = isEn ? '🇺🇸' : '🇮🇳';
+            document.getElementById('currentLangLabel').textContent = isEn ? 'EN' : 'TA';
+            document.getElementById('check-en').style.display = isEn ? 'block' : 'none';
+            document.getElementById('check-ta').style.display = isEn ? 'none' : 'block';
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[key]) el.textContent = translations[key];
+            });
+        }
+
+        function changeLanguage(lang) {
+            loadTranslations(lang);
+        }
+
+        async function loadAdminStats() {
+            try {
+                const data = await api.getAdminStats();
+
+                // Summary
+                document.getElementById('totalFarmers').textContent = data.summary.total_farmers;
+                document.getElementById('totalPlots').textContent = data.summary.total_plots;
+                document.getElementById('totalAlerts').textContent = data.summary.total_alerts;
+                document.getElementById('commonCrop').textContent = data.summary.common_crop || 'None';
+
+                // Trend Chart
+                const trendCtx = document.getElementById('alertTrendChart').getContext('2d');
+                new Chart(trendCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.dailyAlerts.map(d => d.date).reverse(),
+                        datasets: [{ label: 'Alerts', data: data.dailyAlerts.map(d => d.count).reverse(), backgroundColor: '#1565c0' }]
+                    }
+                });
+
+                // Affected Crops Chart
+                const cropsCtx = document.getElementById('affectedCropsChart').getContext('2d');
+                new Chart(cropsCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: data.affectedCrops.map(c => c.species),
+                        datasets: [{ data: data.affectedCrops.map(c => c.alert_count), backgroundColor: ['#d32f2f', '#f57c00', '#fbc02d', '#7b1fa2'] }]
+                    }
+                });
+
+            } catch (e) { console.error(e); }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

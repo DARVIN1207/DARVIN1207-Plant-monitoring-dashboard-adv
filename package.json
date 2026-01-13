@@ -1,0 +1,11 @@
+{
+    "name": "plant-health-monitoring-root",
+    "version": "1.0.0",
+    "description": "Root package to run backend scripts easily",
+    "scripts": {
+        "start": "cd backend && npm start",
+        "dev": "cd backend && npm start",
+        "init-db": "cd backend && npm run init-db"
+    },
+    "dependencies": {}
+}

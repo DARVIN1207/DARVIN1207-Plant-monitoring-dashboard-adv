@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Health Monitoring - Register</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="login-page">
+    <div style="position: absolute; top: 20px; right: 20px;">
+        <div class="language-pill" onclick="toggleLangMenu()">
+            <span id="currentLangIcon">🇺🇸</span>
+            <span id="currentLangLabel">EN</span>
+        </div>
+        <div class="profile-dropdown" id="langDropdown" style="width: 150px; right: 0;">
+            <div class="dropdown-item" onclick="changeLanguage('en')">
+                <span class="lang-option">English 🇺🇸</span>
+            </div>
+            <div class="dropdown-item" onclick="changeLanguage('ta')">
+                <span class="lang-option">தமிழ் 🇮🇳</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-container">
+        <div class="login-card register-card">
+            <div class="logo-section">
+                <h1 data-i18n="join_us">🌱 Join Us</h1>
+                <p data-i18n="create_account_subtitle">Create your account</p>
+            </div>
+            <form id="registerForm" class="login-form">
+                <div class="form-group">
+                    <label for="fullName" data-i18n="full_name">Full Name</label>
+                    <input type="text" id="fullName" name="fullName" required
+                        data-placeholder-i18n="full_name_placeholder" placeholder="Enter your full name">
+                </div>
+
+                <div class="form-group">
+                    <label for="username" data-i18n="username">Username</label>
+                    <input type="text" id="username" name="username" required data-placeholder-i18n="choose_username"
+                        placeholder="Choose a username">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="password" data-i18n="password">Password</label>
+                        <input type="password" id="password" name="password" required data-placeholder-i18n="password"
+                            placeholder="Password">
+                    </div>
+                    <div class="form-group half">
+                        <label for="confirmPassword" data-i18n="confirm_password">Confirm</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required
+                            data-placeholder-i18n="confirm_placeholder" placeholder="Confirm">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="role" data-i18n="i_am_a">I am a...</label>
+                    <select id="role" name="role" required onchange="toggleSpecialization()">
+                        <option value="farmer" data-i18n="role_farmer">Farmer</option>
+                        <option value="botanist" data-i18n="role_botanist">Botanist</option>
+                    </select>
+                </div>
+
+                <div id="specializationGroup" class="form-group" style="display: none;">
+                    <label for="specialization" data-i18n="specialization">Specialization</label>
+                    <select id="specialization" name="specialization">
+                        <option value="Crop Management" data-i18n="spec_crop_mgmt">Crop Management</option>
+                        <option value="Soil Science" data-i18n="spec_soil_sci">Soil Science</option>
+                        <option value="Pest Control" data-i18n="spec_pest_ctrl">Pest Control</option>
+                        <option value="Irrigation Systems" data-i18n="spec_irrigation">Irrigation Systems</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="whatsappNumber" data-i18n="whatsapp_number">WhatsApp Number *</label>
+                    <input type="text" id="whatsappNumber" name="whatsappNumber" required
+                        data-placeholder-i18n="whatsapp_placeholder" placeholder="+12223334444"
+                        title="Format: +12223334444">
+                    <small style="color: grey; font-size: 0.8em;" data-i18n="whatsapp_hint">Includes country code
+                        (Required for alerts)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="email" data-i18n="email_optional">Email (Optional)</label>
+                    <input type="email" id="email" name="email" data-placeholder-i18n="email_optional"
+                        placeholder="example@farm.com">
+                </div>
+
+                <button type="submit" class="btn btn-primary" data-i18n="register_btn">Register</button>
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+            </form>
+
+            <div class="auth-links">
+                <p><span data-i18n="already_have_account">Already have an account?</span> <a href="index.html"
+                        data-i18n="login_here">Login here</a></p>
+            </div>
+        </div>
+    </div>
+    <script src="js/api.js"></script>
+    <script>
+        const registerForm = document.getElementById('registerForm');
+        const errorMessage = document.getElementById('errorMessage');
+        let translations = {};
+
+        async function init() {
+            const savedLang = localStorage.getItem('lang') || 'en';
+            await loadTranslations(savedLang);
+            updateLangUI(savedLang);
+
+            window.addEventListener('click', (e) => {
+                if (!e.target.closest('.language-pill')) {
+                    document.getElementById('langDropdown').classList.remove('active');
+                }
+            });
+        }
+
+        function toggleLangMenu() {
+            document.getElementById('langDropdown').classList.toggle('active');
+        }
+
+        async function loadTranslations(lang) {
+            try {
+                const res = await fetch(`locales/${lang}.json`);
+                translations = await res.json();
+                applyTranslations();
+                localStorage.setItem('lang', lang);
+                updateLangUI(lang);
+            } catch (e) { console.error('Lang load error', e); }
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[key]) el.textContent = translations[key];
+            });
+            document.querySelectorAll('[data-placeholder-i18n]').forEach(el => {
+                const key = el.getAttribute('data-placeholder-i18n');
+                if (translations[key]) el.placeholder = translations[key];
+            });
+        }
+
+        function updateLangUI(lang) {
+            const isEn = lang === 'en';
+            document.getElementById('currentLangIcon').textContent = isEn ? '🇺🇸' : '🇮🇳';
+            document.getElementById('currentLangLabel').textContent = isEn ? 'EN' : 'TA';
+        }
+
+        function changeLanguage(lang) {
+            loadTranslations(lang);
+        }
+
+        function toggleSpecialization() {
+            const role = document.getElementById('role').value;
+            const specializationGroup = document.getElementById('specializationGroup');
+            if (role === 'botanist') {
+                specializationGroup.style.display = 'block';
+            } else {
+                specializationGroup.style.display = 'none';
+            }
+        }
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessage.style.display = 'none';
+
+            const fullName = document.getElementById('fullName').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const role = document.getElementById('role').value;
+            const whatsappNumber = document.getElementById('whatsappNumber').value;
+            const email = document.getElementById('email').value;
+
+            let specialization = null;
+            if (role === 'botanist') {
+                specialization = document.getElementById('specialization').value;
+            }
+
+            if (password !== confirmPassword) {
+                errorMessage.textContent = 'Passwords do not match';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            try {
+                await api.register({
+                    fullName,
+                    username,
+                    password,
+                    role,
+                    email,
+                    whatsappNumber,
+                    specialization
+                });
+
+                // Auto login or redirect to login
+                alert('Registration successful! Please login.');
+                window.location.href = 'index.html';
+
+            } catch (error) {
+                errorMessage.textContent = error.message || 'Registration failed. Please try again.';
+                errorMessage.style.display = 'block';
+            }
+        });
+
+        init();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Detail - Plant Health Monitoring</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>🌱 Plant Detail</h1>
+            <div class="header-info">
+                <div class="user-info">
+                    <span id="userName"></span>
+                </div>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <nav class="nav">
+            <ul class="nav-links">
+                <li><a href="agronomist_dashboard.html">← Back to Plants</a></li>
+            </ul>
+        </nav>
+
+        <div id="loadingMessage" class="loading">Loading plant details...</div>
+
+        <div id="plantDetailSection" style="display: none;">
+            <!-- Plant Info Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Plant Information</h2>
+                    <button class="btn btn-primary" onclick="editPlant()">Edit Plant</button>
+                </div>
+                <div id="plantInfo" class="plant-detail-info"></div>
+            </div>
+
+            <!-- Health Logs Upload -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Upload Health Log</h2>
+                </div>
+                <form id="healthLogForm" onsubmit="saveHealthLog(event)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="log_date">Date</label>
+                            <input type="date" id="log_date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="soil_moisture">Soil Moisture (%)</label>
+                            <input type="number" id="soil_moisture" step="0.1" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="soil_ph">Soil pH</label>
+                            <input type="number" id="soil_ph" step="0.1" min="0" max="14">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="temperature">Temperature (°C)</label>
+                            <input type="number" id="temperature" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="humidity">Humidity (%)</label>
+                            <input type="number" id="humidity" step="0.1" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="sunlight_lux">Sunlight (lux)</label>
+                            <input type="number" id="sunlight_lux" min="0">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nutrient_n">Nitrogen (N)</label>
+                            <input type="number" id="nutrient_n" step="0.1" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="nutrient_p">Phosphorus (P)</label>
+                            <input type="number" id="nutrient_p" step="0.1" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="nutrient_k">Potassium (K)</label>
+                            <input type="number" id="nutrient_k" step="0.1" min="0">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="growth_height_cm">Growth Height (cm)</label>
+                            <input type="number" id="growth_height_cm" step="0.1" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="disease_risk">Disease Risk (%)</label>
+                            <input type="number" id="disease_risk" min="0" max="100">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Health Log</button>
+                </form>
+            </div>
+
+            <!-- Health Logs Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Health Logs History</h2>
+                </div>
+                <div class="table-container">
+                    <table id="healthLogsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Moisture</th>
+                                <th>pH</th>
+                                <th>Temp</th>
+                                <th>Humidity</th>
+                                <th>Sunlight</th>
+                                <th>N-P-K</th>
+                                <th>Height</th>
+                                <th>Disease Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="healthLogsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Recommendations</h2>
+                    <button class="btn btn-success" onclick="showAddRecommendationForm()">+ Add Recommendation</button>
+                </div>
+                <div id="recommendationsList"></div>
+            </div>
+
+            <!-- Alerts -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Alerts</h2>
+                    <button class="btn btn-success" onclick="showAddAlertForm()">+ Add Alert</button>
+                </div>
+                <div id="alertsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation Modal -->
+    <div id="recommendationModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="max-width: 600px; margin: 50px auto; background: white; padding: 30px; border-radius: 15px;">
+            <h2>Add Recommendation</h2>
+            <form onsubmit="saveRecommendation(event)">
+                <div class="form-group">
+                    <label for="advice_text">Advice Text *</label>
+                    <textarea id="advice_text" rows="4" required></textarea>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeRecommendationModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alertModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="max-width: 600px; margin: 50px auto; background: white; padding: 30px; border-radius: 15px;">
+            <h2>Add Alert</h2>
+            <form onsubmit="saveAlert(event)">
+                <div class="form-group">
+                    <label for="alert_message">Alert Message *</label>
+                    <textarea id="alert_message" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="alert_status">Status</label>
+                    <select id="alert_status">
+                        <option value="active">Active</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAlertModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Plant Modal -->
+    <div id="editPlantModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div style="max-width: 600px; margin: 50px auto; background: white; padding: 30px; border-radius: 15px;">
+            <h2>Edit Plant</h2>
+            <form id="editPlantForm" onsubmit="updatePlant(event)">
+                <div class="form-group">
+                    <label for="edit_plant_name">Plant Name *</label>
+                    <input type="text" id="edit_plant_name" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_species">Species *</label>
+                        <input type="text" id="edit_species" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_age_days">Age (Days) *</label>
+                        <input type="number" id="edit_age_days" required min="0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit_location">Location *</label>
+                        <input type="text" id="edit_location" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_farmer_name">Farmer Name *</label>
+                        <input type="text" id="edit_farmer_name" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="edit_notes">Notes</label>
+                    <textarea id="edit_notes" rows="3"></textarea>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditPlantModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        let currentPlant = null;
+        const urlParams = new URLSearchParams(window.location.search);
+        const plantId = urlParams.get('id');
+
+        if (!checkAuth()) {
+            // Redirect handled by checkAuth
+        }
+
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user.role !== 'botanist') {
+            alert('Access denied. Botanist role required.');
+            window.location.href = 'farmer_dashboard.html';
+        }
+
+        document.getElementById('userName').textContent = `Welcome, ${user.name}`;
+
+        // Set default date to today
+        document.getElementById('log_date').valueAsDate = new Date();
+
+        async function loadPlantDetail() {
+            if (!plantId) {
+                alert('Plant ID not provided');
+                window.location.href = 'agronomist_dashboard.html';
+                return;
+            }
+
+            try {
+                currentPlant = await api.getPlant(plantId);
+                displayPlantInfo(currentPlant);
+                await loadHealthLogs();
+                await loadRecommendations();
+                await loadAlerts();
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('plantDetailSection').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading plant:', error);
+                alert('Failed to load plant details.');
+            }
+        }
+
+        function displayPlantInfo(plant) {
+            document.getElementById('plantInfo').innerHTML = `
+                <div class="info-item">
+                    <label>Plant Name</label>
+                    <value>${plant.plant_name}</value>
+                </div>
+                <div class="info-item">
+                    <label>Species</label>
+                    <value>${plant.species}</value>
+                </div>
+                <div class="info-item">
+                    <label>Age</label>
+                    <value>${plant.age_days} days</value>
+                </div>
+                <div class="info-item">
+                    <label>Location</label>
+                    <value>${plant.location}</value>
+                </div>
+                <div class="info-item">
+                    <label>Farmer</label>
+                    <value>${plant.farmer_name}</value>
+                </div>
+                <div class="info-item">
+                    <label>Notes</label>
+                    <value>${plant.notes || 'None'}</value>
+                </div>
+            `;
+        }
+
+        async function loadHealthLogs() {
+            try {
+                const logs = await api.getHealthLogs(plantId);
+                const tbody = document.getElementById('healthLogsBody');
+                if (logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9">No health logs available</td></tr>';
+                } else {
+                    tbody.innerHTML = logs.map(log => `
+                        <tr>
+                            <td>${new Date(log.log_date).toLocaleDateString()}</td>
+                            <td>${log.soil_moisture || '-'}</td>
+                            <td>${log.soil_ph || '-'}</td>
+                            <td>${log.temperature || '-'}</td>
+                            <td>${log.humidity || '-'}</td>
+                            <td>${log.sunlight_lux || '-'}</td>
+                            <td>${log.nutrient_n || '-'} / ${log.nutrient_p || '-'} / ${log.nutrient_k || '-'}</td>
+                            <td>${log.growth_height_cm || '-'}</td>
+                            <td>${log.disease_risk || '-'}%</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading health logs:', error);
+            }
+        }
+
+        async function loadRecommendations() {
+            try {
+                const recommendations = await api.getRecommendations(plantId);
+                const list = document.getElementById('recommendationsList');
+                if (recommendations.length === 0) {
+                    list.innerHTML = '<p>No recommendations available.</p>';
+                } else {
+                    list.innerHTML = recommendations.map(rec => `
+                        <div class="recommendation-card">
+                            <p><strong>${rec.agronomist_name}</strong> (${rec.specialization})</p>
+                            <p>${rec.advice_text}</p>
+                            <small>${new Date(rec.created_at).toLocaleDateString()}</small>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading recommendations:', error);
+            }
+        }
+
+        async function loadAlerts() {
+            try {
+                const alerts = await api.getAlerts(plantId);
+                const list = document.getElementById('alertsList');
+                if (alerts.length === 0) {
+                    list.innerHTML = '<p>No alerts available.</p>';
+                } else {
+                    list.innerHTML = alerts.map(alert => `
+                        <div class="alert-card ${alert.status === 'resolved' ? 'resolved' : ''}">
+                            <p><strong>Status:</strong> ${alert.status.toUpperCase()}</p>
+                            <p>${alert.message}</p>
+                            <small>${new Date(alert.created_at).toLocaleDateString()}</small>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+            }
+        }
+
+        async function saveHealthLog(event) {
+            event.preventDefault();
+            
+            const logData = {
+                log_date: document.getElementById('log_date').value,
+                soil_moisture: parseFloat(document.getElementById('soil_moisture').value) || null,
+                soil_ph: parseFloat(document.getElementById('soil_ph').value) || null,
+                temperature: parseFloat(document.getElementById('temperature').value) || null,
+                humidity: parseFloat(document.getElementById('humidity').value) || null,
+                sunlight_lux: parseInt(document.getElementById('sunlight_lux').value) || null,
+                nutrient_n: parseFloat(document.getElementById('nutrient_n').value) || null,
+                nutrient_p: parseFloat(document.getElementById('nutrient_p').value) || null,
+                nutrient_k: parseFloat(document.getElementById('nutrient_k').value) || null,
+                growth_height_cm: parseFloat(document.getElementById('growth_height_cm').value) || null,
+                disease_risk: parseInt(document.getElementById('disease_risk').value) || null
+            };
+
+            try {
+                await api.createHealthLog(plantId, logData);
+                document.getElementById('healthLogForm').reset();
+                document.getElementById('log_date').valueAsDate = new Date();
+                await loadHealthLogs();
+                alert('Health log saved successfully!');
+            } catch (error) {
+                alert('Failed to save health log: ' + error.message);
+            }
+        }
+
+        function showAddRecommendationForm() {
+            document.getElementById('recommendationModal').style.display = 'block';
+        }
+
+        function closeRecommendationModal() {
+            document.getElementById('recommendationModal').style.display = 'none';
+            document.getElementById('advice_text').value = '';
+        }
+
+        async function saveRecommendation(event) {
+            event.preventDefault();
+            const advice_text = document.getElementById('advice_text').value;
+
+            try {
+                await api.createRecommendation({ plant_id: plantId, advice_text });
+                closeRecommendationModal();
+                await loadRecommendations();
+            } catch (error) {
+                alert('Failed to save recommendation: ' + error.message);
+            }
+        }
+
+        function showAddAlertForm() {
+            document.getElementById('alertModal').style.display = 'block';
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alertModal').style.display = 'none';
+            document.getElementById('alert_message').value = '';
+        }
+
+        async function saveAlert(event) {
+            event.preventDefault();
+            const message = document.getElementById('alert_message').value;
+            const status = document.getElementById('alert_status').value;
+
+            try {
+                await api.createAlert({ plant_id: plantId, message, status });
+                closeAlertModal();
+                await loadAlerts();
+            } catch (error) {
+                alert('Failed to save alert: ' + error.message);
+            }
+        }
+
+        function editPlant() {
+            document.getElementById('edit_plant_name').value = currentPlant.plant_name;
+            document.getElementById('edit_species').value = currentPlant.species;
+            document.getElementById('edit_age_days').value = currentPlant.age_days;
+            document.getElementById('edit_location').value = currentPlant.location;
+            document.getElementById('edit_farmer_name').value = currentPlant.farmer_name;
+            document.getElementById('edit_notes').value = currentPlant.notes || '';
+            document.getElementById('editPlantModal').style.display = 'block';
+        }
+
+        function closeEditPlantModal() {
+            document.getElementById('editPlantModal').style.display = 'none';
+        }
+
+        async function updatePlant(event) {
+            event.preventDefault();
+            
+            const plantData = {
+                plant_name: document.getElementById('edit_plant_name').value,
+                species: document.getElementById('edit_species').value,
+                age_days: parseInt(document.getElementById('edit_age_days').value),
+                location: document.getElementById('edit_location').value,
+                farmer_name: document.getElementById('edit_farmer_name').value,
+                notes: document.getElementById('edit_notes').value
+            };
+
+            try {
+                currentPlant = await api.updatePlant(plantId, plantData);
+                displayPlantInfo(currentPlant);
+                closeEditPlantModal();
+            } catch (error) {
+                alert('Failed to update plant: ' + error.message);
+            }
+        }
+
+        loadPlantDetail();
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendations - Plant Health Monitoring</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>🌱 Recommendations & Alerts</h1>
+            <div class="header-info">
+                <div class="user-info">
+                    <span id="userName"></span>
+                </div>
+                <button class="btn-logout" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <nav class="nav">
+            <ul class="nav-links">
+                <li><a href="farmer_dashboard.html">Dashboard</a></li>
+                <li><a href="farmer_recommendations.html" class="active">Recommendations</a></li>
+            </ul>
+        </nav>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">Select Plant</h2>
+            </div>
+            <div class="form-group">
+                <label for="plantSelect">Choose a plant to view recommendations and alerts</label>
+                <select id="plantSelect" class="form-group input">
+                    <option value="">Loading plants...</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="recommendationsSection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Recommendations</h2>
+                </div>
+                <div id="recommendationsList"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Alerts</h2>
+                </div>
+                <div id="alertsList"></div>
+            </div>
+        </div>
+
+        <div id="loadingMessage" class="loading">
+            <p>Select a plant to view recommendations and alerts</p>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        if (!checkAuth()) {
+            // Redirect handled by checkAuth
+        }
+
+        const user = JSON.parse(localStorage.getItem('user'));
+        document.getElementById('userName').textContent = `Welcome, ${user.name}`;
+
+        async function loadPlants() {
+            try {
+                const plants = await api.getPlants();
+                const select = document.getElementById('plantSelect');
+                select.innerHTML = '<option value="">Select a plant...</option>';
+                
+                plants.forEach(plant => {
+                    const option = document.createElement('option');
+                    option.value = plant.plant_id;
+                    option.textContent = `${plant.plant_name} - ${plant.species} (${plant.location})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading plants:', error);
+            }
+        }
+
+        document.getElementById('plantSelect').addEventListener('change', async (e) => {
+            const plantId = e.target.value;
+            if (plantId) {
+                await loadRecommendationsAndAlerts(plantId);
+            } else {
+                document.getElementById('recommendationsSection').style.display = 'none';
+                document.getElementById('loadingMessage').style.display = 'block';
+            }
+        });
+
+        async function loadRecommendationsAndAlerts(plantId) {
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('recommendationsSection').style.display = 'block';
+
+            try {
+                const [recommendations, alerts] = await Promise.all([
+                    api.getRecommendations(plantId),
+                    api.getAlerts(plantId)
+                ]);
+
+                // Display recommendations
+                const recList = document.getElementById('recommendationsList');
+                if (recommendations.length === 0) {
+                    recList.innerHTML = '<p>No recommendations available for this plant.</p>';
+                } else {
+                    recList.innerHTML = recommendations.map(rec => `
+                        <div class="recommendation-card">
+                            <p><strong>${rec.agronomist_name}</strong> (${rec.specialization})</p>
+                            <p>${rec.advice_text}</p>
+                            <small>${new Date(rec.created_at).toLocaleDateString()}</small>
+                        </div>
+                    `).join('');
+                }
+
+                // Display alerts
+                const alertsList = document.getElementById('alertsList');
+                if (alerts.length === 0) {
+                    alertsList.innerHTML = '<p>No active alerts for this plant.</p>';
+                } else {
+                    alertsList.innerHTML = alerts.map(alert => `
+                        <div class="alert-card ${alert.status === 'resolved' ? 'resolved' : ''}">
+                            <p><strong>Status:</strong> ${alert.status.toUpperCase()}</p>
+                            <p>${alert.message}</p>
+                            <small>${new Date(alert.created_at).toLocaleDateString()}</small>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Failed to load recommendations and alerts.');
+            }
+        }
+
+        loadPlants();
+    </script>
+</body>
+</html>
+
+
+

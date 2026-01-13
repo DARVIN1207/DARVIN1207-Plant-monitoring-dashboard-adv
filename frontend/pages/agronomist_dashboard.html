@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agronomist Dashboard - Plant Health Monitoring</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1 data-i18n="agronomist_dashboard">🌱 Agronomist Dashboard</h1>
+            <div class="header-right">
+                <!-- Custom Language Switcher -->
+                <div class="language-pill" onclick="toggleProfileMenu()">
+                    <span id="currentLangIcon">🇺🇸</span>
+                    <span id="currentLangLabel">EN</span>
+                </div>
+
+                <button class="btn btn-success" onclick="showWAModal()"
+                    style="margin-right: 15px; padding: 5px 10px; font-size: 0.9em; display:flex; align-items:center; gap:5px;">
+                    <i class="fab fa-whatsapp"></i> <span id="waStatusText">Connect My WhatsApp</span>
+                </button>
+
+                <!-- Profile Management -->
+                <div class="profile-container">
+                    <div class="profile-trigger" onclick="toggleProfileMenu()">
+                        <div class="avatar" id="userAvatar">U</div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div class="dropdown-header">
+                            <div id="dropdownName" style="font-weight:bold;">User Name</div>
+                            <div id="dropdownEmail" class="email">user@example.com</div>
+                        </div>
+
+                        <div style="padding: 5px 0;">
+                            <div class="dropdown-item" onclick="changeLanguage('en')">
+                                <span class="lang-option">English 🇺🇸 <i class="fas fa-check" id="check-en"></i></span>
+                            </div>
+                            <div class="dropdown-item" onclick="changeLanguage('ta')">
+                                <span class="lang-option">தமிழ் 🇮🇳 <i class="fas fa-check" id="check-ta"
+                                        style="display:none;"></i></span>
+                            </div>
+                        </div>
+
+                        <hr style="border:0; border-top:1px solid #eee; margin: 5px 0;">
+
+                        <button class="dropdown-item" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="nav">
+            <ul class="nav-links">
+                <li><a href="#" id="plantsLink" class="active" onclick="switchView('plants')">Plants</a></li>
+                <li><a href="#" id="usersLink" onclick="switchView('users')">User Directory</a></li>
+            </ul>
+        </nav>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title" data-i18n="plant_management">Plant Management</h2>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn btn-secondary" onclick="downloadReport('alerts')"
+                        style="background: #e0f2f1; color: #00695c;">
+                        <i class="fas fa-file-csv"></i> Alert Report
+                    </button>
+                    <button class="btn btn-secondary" onclick="downloadReport('health')"
+                        style="background: #e0f2f1; color: #00695c;">
+                        <i class="fas fa-file-medical"></i> Health Data
+                    </button>
+                    <button class="btn btn-primary" onclick="showAddPlantForm()" data-i18n="add_new_plant">+ Add New
+                        Plant</button>
+                </div>
+            </div>
+
+            <div id="plantView">
+                <div class="search-filters">
+                    <div class="search-input">
+                        <input type="text" id="searchInput" data-placeholder-i18n="search_plants"
+                            placeholder="Search plants..." oninput="filterPlants()">
+                    </div>
+                    <select class="filter-select" id="speciesFilter" onchange="filterPlants()">
+                        <option value="" data-i18n="all_species">All Species</option>
+                    </select>
+                </div>
+
+                <div id="plantList" class="plant-list">
+                    <div class="loading">Loading plants...</div>
+                </div>
+            </div>
+
+            <div id="userView" style="display:none;">
+                <div class="search-filters">
+                    <div class="search-input">
+                        <input type="text" id="userSearchInput" placeholder="Search users by name or username..."
+                            oninput="filterUsers()">
+                    </div>
+                </div>
+                <div class="table-container" style="overflow-x: auto; margin-top: 15px;">
+                    <table style="width: 100%; border-collapse: collapse; background: white;">
+                        <thead style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
+                            <tr>
+                                <th style="padding: 12px; text-align: left;">Name</th>
+                                <th style="padding: 12px; text-align: left;">Username</th>
+                                <th style="padding: 12px; text-align: left;">Role</th>
+                                <th style="padding: 12px; text-align: left;">Phone / WhatsApp</th>
+                                <th style="padding: 12px; text-align: left;">Email / Specialization</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <tr>
+                                <td colspan="5" style="padding: 20px; text-align: center;">Loading users...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Plant Modal -->
+    <div id="plantModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Add New Plant</h2>
+            <form id="plantForm" onsubmit="savePlant(event)">
+                <div class="form-group">
+                    <label>Plant Name *</label>
+                    <input type="text" id="plant_name" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Species *</label>
+                        <input type="text" id="species" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Age (Days) *</label>
+                        <input type="number" id="age_days" required min="0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Location *</label>
+                        <input type="text" id="location" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Plot Name</label>
+                        <input type="text" id="plot_name" placeholder="e.g. Plot A-1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Assign to Farmer *</label>
+                    <select id="user_id" required>
+                        <option value="">Loading farmers...</option>
+                    </select>
+                    <small style="color: #666;">Format: Name (@Username)</small>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="notes" rows="3"></textarea>
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closePlantModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Schedule Modal -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <h2>📅 Schedule Care / Alert</h2>
+            <p id="alertPlantName" style="color: #666; margin-bottom: 15px;"></p>
+
+            <div id="farmerInfoBox"
+                style="background: #e3f2fd; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9em;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <i class="fab fa-whatsapp"></i> Farmer: <span id="alertFarmerName">Loading...</span>
+                        (<span id="alertFarmerPhone">...</span>)
+                    </div>
+                    <button onclick="toggleEditContact()"
+                        style="background:none; border:none; cursor:pointer; color:#0277bd; font-size:0.9em;">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                </div>
+                <!-- Edit contact form (hidden by default) -->
+                <div id="editContactForm"
+                    style="display:none; margin-top:10px; border-top:1px solid #bbdefb; padding-top:10px;">
+                    <input type="text" id="newFarmerPhone" placeholder="Enter new number (e.g. 9876543210)"
+                        style="width: 70%; padding: 5px; border:1px solid #ccc; border-radius:4px;">
+                    <button onclick="saveFarmerContact()" class="btn btn-sm btn-primary"
+                        style="padding: 5px 10px;">Save</button>
+                </div>
+            </div>
+
+            <form id="alertForm" onsubmit="saveAlert(event)">
+                <input type="hidden" id="alert_plant_id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="alert_type">
+                            <option value="water">💧 Watering</option>
+                            <option value="fertilizer">🧪 Fertilizer</option>
+                            <option value="custom">📢 Custom Message</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Priority</label>
+                        <select id="alert_priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Message *</label>
+                    <textarea id="alert_message" rows="3" required
+                        placeholder="e.g. Water 20 liters today evening"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Schedule Time (Optional)</label>
+                    <input type="datetime-local" id="alert_time">
+                    <small>Leave empty to just send/log immediately</small>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-success" onclick="sendWhatsAppNow()"
+                        style="background: #25D366; color: white; border: none;">
+                        <i class="fab fa-whatsapp"></i> Send Now (Mobile)
+                    </button>
+                    <button type="submit" class="btn btn-primary">Schedule System Alert</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAlertModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Calendar Modal -->
+    <div id="calendarModal" class="modal">
+        <div class="modal-content">
+            <h2>📅 Crop Calendar & Planner</h2>
+            <p id="calendarPlantName" style="color: #666; margin-bottom: 15px;"></p>
+            <input type="hidden" id="calendar_plant_id">
+
+            <!-- Auto Generate Section -->
+            <div
+                style="background: #f0f7f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #c8e6c9;">
+                <h3 style="font-size: 1rem; margin-top:0;">✨ Auto-Generate Schedule</h3>
+                <div class="form-row" style="align-items: end;">
+                    <div class="form-group" style="flex: 1; margin:0;">
+                        <label>Planting Date</label>
+                        <input type="date" id="planting_date">
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="generateSchedule()"
+                        style="width: auto;">Generate</button>
+                </div>
+            </div>
+
+            <!-- Existing Tasks -->
+            <div style="margin-bottom: 20px;">
+                <h3>Current Tasks</h3>
+                <div id="taskList"
+                    style="max-height: 200px; overflow-y: auto; background: #fafafa; border: 1px solid #eee; padding: 10px; border-radius: 5px;">
+                    Loading tasks...
+                </div>
+            </div>
+
+            <!-- Manual Add -->
+            <h3>Add Manual Task</h3>
+            <form id="taskForm" onsubmit="saveTask(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="task_type">
+                            <option value="Watering">Watering</option>
+                            <option value="Fertilizer">Fertilizer</option>
+                            <option value="Harvest">Harvest</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="task_date" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="task_desc" placeholder="Details...">
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Add Task</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeCalendarModal()">Close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Health Log Modal -->
+    <div id="healthModal" class="modal">
+        <div class="modal-content">
+            <h2>📝 Add Health Data Logs</h2>
+            <p id="healthPlantName" style="color: #666; margin-bottom: 15px;"></p>
+            <form id="healthForm" onsubmit="saveHealthLog(event)">
+                <input type="hidden" id="health_plant_id">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Log Date</label>
+                        <input type="date" id="log_date" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Soil Moisture (%)</label>
+                        <input type="number" step="0.1" id="soil_moisture" required placeholder="0-100">
+                    </div>
+                    <div class="form-group">
+                        <label>Soil pH</label>
+                        <input type="number" step="0.1" id="soil_ph" required placeholder="0-14">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Temp (°C)</label>
+                        <input type="number" step="0.1" id="temperature" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Humidity (%)</label>
+                        <input type="number" step="0.1" id="humidity" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Sunlight (lux)</label>
+                        <input type="number" id="sunlight_lux" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Growth (cm)</label>
+                        <input type="number" step="0.1" id="growth_height_cm" required>
+                    </div>
+                </div>
+
+                <div class="form-label">Nutrients (ppm)</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>N (Nitrogen)</label>
+                        <input type="number" step="0.1" id="nutrient_n" required>
+                    </div>
+                    <div class="form-group">
+                        <label>P (Phosphorus)</label>
+                        <input type="number" step="0.1" id="nutrient_p" required>
+                    </div>
+                    <div class="form-group">
+                        <label>K (Potassium)</label>
+                        <input type="number" step="0.1" id="nutrient_k" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Disease Risk (%)</label>
+                    <input type="number" id="disease_risk" required min="0" max="100">
+                </div>
+                <div class="btn-group">
+                    <button type="submit" class="btn btn-primary">Save Data</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeHealthModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Chat Widget -->
+    <button id="chatToggleBtn" onclick="toggleChat()"
+        style="position: fixed; bottom: 20px; right: 20px; background: #2e7d32; color: white; border: none; padding: 15px; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000;">
+        <i class="fas fa-comments"></i>
+    </button>
+    <div id="chatWidget"
+        style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; background: white; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; overflow: hidden; border: 1px solid #ddd;">
+        <div
+            style="background: #2e7d32; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 1rem; margin: 0;">Chat with Farmer</h3>
+            <span onclick="toggleChat()" style="cursor: pointer;">&times;</span>
+        </div>
+        <div style="padding: 10px; background: #f5f5f5; border-bottom: 1px solid #eee;">
+            <select id="chatContactSelect" onchange="loadChat(this.value)" style="width: 100%; padding: 5px;">
+                <option value="">Select Farmer...</option>
+            </select>
+        </div>
+        <div id="chatMessages" class="chat-messages"
+            style="height: 300px; padding: 10px; overflow-y: auto; background: white; display: flex; flex-direction: column; gap: 8px;">
+        </div>
+        <div class="chat-input-area"
+            style="padding: 10px; border-top: 1px solid #ddd; display: flex; gap: 5px; background: #f9f9f9;">
+            <input type="text" id="chatInput" placeholder="Type a message..."
+                style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 20px; outline: none;">
+            <button onclick="sendChatMessage()"
+                style="background: #2e7d32; color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer;">
+                <i class="fas fa-paper-plane"></i> </button>
+        </div>
+    </div>
+
+    <!-- WhatsApp QR Modal -->
+    <div id="waModal" class="modal">
+        <div class="modal-content" style="text-align: center; max-width: 400px;">
+            <h2>📱 Connect WhatsApp</h2>
+            <p style="color: #666; margin-bottom: 20px;">Scan this QR code with your mobile (Linked Devices) to enable
+                automatic messaging.</p>
+            <div id="waQrContainer"
+                style="margin: 20px auto; min-height: 200px; display:flex; justify-content:center; align-items:center;">
+                <div class="loading">Loading QR...</div>
+            </div>
+            <div id="waSuccessMsg" style="display:none; color: green; font-weight: bold; margin-bottom: 20px;">
+                ✅ Connected Successfully!
+            </div>
+            <button class="btn btn-secondary" onclick="closeWAModal()">Close</button>
+        </div>
+    </div>
+
+
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            max-width: 600px;
+            margin: 30px auto;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+        }
+
+        .action-btn {
+            background: #e0f2f1;
+            color: #00695c;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 5px;
+            font-size: 0.85em;
+            margin-right: 5px;
+        }
+
+        .action-btn:hover {
+            background: #b2dfdb;
+        }
+
+        .btn-success:hover {
+            opacity: 0.9;
+        }
+
+        .form-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .task-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .task-date {
+            color: #666;
+            font-size: 0.85em;
+        }
+    </style>
+
+    <script src="../js/api.js"></script>
+    <script>
+        let allPlants = [];
+        let farmers = [];
+        let allUsers = [];
+        let editingPlantId = null;
+        let currentAlertFarmerNumber = '';
+        let currentChatUser = null;
+
+        if (!checkAuth()) { }
+
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user.role !== 'botanist') {
+            window.location.href = 'farmer_dashboard.html';
+        }
+
+        let translations = {};
+
+        async function init() {
+            // Setup Profile UI
+            const name = user.full_name || user.name || 'User';
+            document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+            document.getElementById('dropdownName').textContent = name;
+            document.getElementById('dropdownEmail').textContent = user.email || (user.username + '@field.com');
+
+            // Language Init
+            const savedLang = localStorage.getItem('lang') || 'en';
+            updateLangUI(savedLang);
+            await loadTranslations(savedLang);
+
+            if (document.getElementById('log_date')) document.getElementById('log_date').valueAsDate = new Date();
+            if (document.getElementById('planting_date')) document.getElementById('planting_date').valueAsDate = new Date();
+
+            await Promise.all([loadPlants(), loadFarmers(), loadAllUsers()]);
+            loadChatContacts();
+
+            // Close dropdown on outside click
+            window.addEventListener('click', (e) => {
+                if (!e.target.closest('.profile-container') && !e.target.closest('.language-pill')) {
+                    document.getElementById('profileDropdown').classList.remove('active');
+                }
+            });
+
+            setInterval(() => {
+                if (document.getElementById('chatWidget').style.display !== 'none' && currentChatUser) {
+                    loadChat(currentChatUser, false);
+                }
+            }, 5000);
+        }
+
+        function toggleProfileMenu() {
+            document.getElementById('profileDropdown').classList.toggle('active');
+        }
+
+        async function loadTranslations(lang) {
+            try {
+                const res = await fetch(`../locales/${lang}.json`);
+                translations = await res.json();
+                applyTranslations();
+                localStorage.setItem('lang', lang);
+                updateLangUI(lang);
+                if (allPlants.length > 0) displayPlants(allPlants); // Re-render plants with new lang
+            } catch (e) { console.error('Lang load error', e); }
+        }
+
+        function updateLangUI(lang) {
+            const isEn = lang === 'en';
+            document.getElementById('currentLangIcon').textContent = isEn ? '🇺🇸' : '🇮🇳';
+            document.getElementById('currentLangLabel').textContent = isEn ? 'EN' : 'TA';
+            document.getElementById('check-en').style.display = isEn ? 'block' : 'none';
+            document.getElementById('check-ta').style.display = isEn ? 'none' : 'block';
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[key]) el.textContent = translations[key];
+            });
+            document.querySelectorAll('[data-placeholder-i18n]').forEach(el => {
+                const key = el.getAttribute('data-placeholder-i18n');
+                if (translations[key]) el.placeholder = translations[key];
+            });
+        }
+
+        function changeLanguage(lang) {
+            loadTranslations(lang);
+        }
+
+        async function loadFarmers() {
+            try {
+                farmers = await api.getFarmers();
+                const select = document.getElementById('user_id');
+                select.innerHTML = '<option value="">Select Farmer</option>';
+                farmers.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.user_id;
+                    opt.textContent = `${f.full_name} (ID: ${f.user_id}) - ${f.username ? '@' + f.username : ''}`;
+                    select.appendChild(opt);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadPlants() {
+            try {
+                allPlants = await api.getPlants();
+                displayPlants(allPlants);
+                populateFilters();
+            } catch (error) { document.getElementById('plantList').innerHTML = '<p>Failed.</p>'; }
+        }
+
+        function displayPlants(plants) {
+            const list = document.getElementById('plantList');
+            if (plants.length === 0) { list.innerHTML = '<p>No plants found.</p>'; return; }
+
+            list.innerHTML = plants.map(plant => `
+                <div class="plant-card">
+                    <div style="display:flex; justify-content:space-between; align-items:start">
+                        <h3 onclick="viewPlant(${plant.plant_id})" style="cursor:pointer">${plant.plant_name}</h3>
+                        <div>
+                            <button class="action-btn" onclick="showHealthModal(${plant.plant_id}, '${plant.plant_name}')">
+                                <i class="fas fa-file-medical"></i> Log Data
+                            </button>
+                             <button class="action-btn" onclick="showCalendarModal(${plant.plant_id}, '${plant.plant_name}')">
+                                <i class="far fa-calendar-alt"></i> Plan
+                            </button>
+                            <button class="action-btn" onclick="showAlertModal(${plant.plant_id}, '${plant.plant_name}', '${plant.whatsapp_number}', '${plant.farmer_name}', ${plant.user_id})">
+                                <i class="fab fa-whatsapp"></i> Alert
+                            </button>
+                        </div>
+                    </div>
+                    <div class="plant-info" onclick="viewPlant(${plant.plant_id})" style="cursor:pointer">
+                        <div><strong data-i18n="species">Species:</strong> ${translations['species_' + plant.species.toLowerCase()] || plant.species}</div>
+                        <div><strong data-i18n="plot">Plot:</strong> ${plant.plot_name || plant.location}</div>
+                        <div><strong data-i18n="farmer">Farmer:</strong> ${plant.farmer_name}</div>
+                        ${plant.notes ? `<div><strong>Notes:</strong> ${plant.notes}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateFilters() {
+            const species = [...new Set(allPlants.map(p => p.species))].sort();
+            const filter = document.getElementById('speciesFilter');
+            filter.innerHTML = '<option value="">All Species</option>';
+            species.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                filter.appendChild(opt);
+            });
+        }
+
+        function filterPlants() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const species = document.getElementById('speciesFilter').value;
+            const filtered = allPlants.filter(p => {
+                return (!species || p.species === species) &&
+                    (!search || p.plant_name.toLowerCase().includes(search) ||
+                        p.farmer_name.toLowerCase().includes(search));
+            });
+            displayPlants(filtered);
+        }
+
+        function switchView(view) {
+            if (view === 'plants') {
+                document.getElementById('plantView').style.display = 'block';
+                document.getElementById('userView').style.display = 'none';
+                document.getElementById('plantsLink').classList.add('active');
+                document.getElementById('usersLink').classList.remove('active');
+            } else {
+                document.getElementById('plantView').style.display = 'none';
+                document.getElementById('userView').style.display = 'block';
+                document.getElementById('plantsLink').classList.remove('active');
+                document.getElementById('usersLink').classList.add('active');
+            }
+        }
+
+        async function loadAllUsers() {
+            try {
+                allUsers = await api.getUsers();
+                displayUsers(allUsers);
+            } catch (e) {
+                console.error('Error loading users:', e);
+                document.getElementById('userTableBody').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Failed to load directory.</td></tr>';
+            }
+        }
+
+        // WhatsApp QR Logic - Per-Botanist Session
+        let waPollInterval;
+        function showWAModal() {
+            document.getElementById('waModal').style.display = 'block';
+            // Initialize connection for this botanist
+            initializeBotanistWhatsApp();
+            pollWAStatus();
+            waPollInterval = setInterval(pollWAStatus, 3000);
+        }
+        function closeWAModal() {
+            document.getElementById('waModal').style.display = 'none';
+            clearInterval(waPollInterval);
+        }
+        async function initializeBotanistWhatsApp() {
+            try {
+                const token = await getToken();
+                const res = await fetch('http://localhost:3000/api/whatsapp/connect', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                console.log('[WhatsApp] Initialization started:', data);
+            } catch (e) { console.error('Failed to initialize WhatsApp:', e); }
+        }
+        async function pollWAStatus() {
+            try {
+                const token = await getToken();
+                const res = await fetch('http://localhost:3000/api/whatsapp/status', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (data.isReady) {
+                    document.getElementById('waQrContainer').innerHTML = '<i class="fas fa-check-circle" style="font-size: 4em; color: green;"></i>';
+                    document.getElementById('waSuccessMsg').style.display = 'block';
+                    document.getElementById('waStatusText').textContent = '✓ My WhatsApp';
+                    clearInterval(waPollInterval);
+                } else if (data.qrCodeImage) {
+                    document.getElementById('waQrContainer').innerHTML = `<img src="${data.qrCodeImage}" style="width:100%; border:1px solid #ddd;">`;
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function displayUsers(users) {
+            const body = document.getElementById('userTableBody');
+            if (users.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" style="text-align:center;">No users found.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = users.map(u => `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 12px;"><strong>${u.full_name}</strong></td>
+                    <td style="padding: 12px; color: #666;">@${u.username}</td>
+                    <td style="padding: 12px;"><span class="badge badge-${u.role === 'farmer' ? 'success' : 'medium'}" style="text-transform: capitalize;">${u.role}</span></td>
+                    <td style="padding: 12px;">
+                        <div>${u.phone || '-'}</div>
+                        <div style="font-size: 0.85em; color: #25D366;"><i class="fab fa-whatsapp"></i> ${u.whatsapp_number || '-'}</div>
+                    </td>
+                    <td style="padding: 12px;">
+                        <div>${u.email || '-'}</div>
+                        <div style="font-size: 0.85em; color: #666;">${u.specialization || ''}</div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterUsers() {
+            const search = document.getElementById('userSearchInput').value.toLowerCase();
+            const filtered = allUsers.filter(u =>
+                u.full_name.toLowerCase().includes(search) ||
+                u.username.toLowerCase().includes(search) ||
+                u.role.toLowerCase().includes(search)
+            );
+            displayUsers(filtered);
+        }
+
+        function viewPlant(id) { window.location.href = `plant_detail.html?id=${id}`; }
+
+        function showAddPlantForm() {
+            editingPlantId = null;
+            document.getElementById('modalTitle').textContent = 'Add New Plant';
+            document.getElementById('plantForm').reset();
+            document.getElementById('plantModal').style.display = 'block';
+        }
+
+        function closePlantModal() { document.getElementById('plantModal').style.display = 'none'; }
+
+        async function savePlant(e) {
+            e.preventDefault();
+            const data = {
+                plant_name: document.getElementById('plant_name').value,
+                species: document.getElementById('species').value,
+                age_days: document.getElementById('age_days').value,
+                location: document.getElementById('location').value,
+                plot_name: document.getElementById('plot_name').value,
+                user_id: document.getElementById('user_id').value,
+                notes: document.getElementById('notes').value
+            };
+            try {
+                if (editingPlantId) await api.updatePlant(editingPlantId, data);
+                else await api.createPlant(data);
+                closePlantModal();
+                loadPlants();
+                alert('Plant saved successfully!');
+            } catch (err) {
+                console.error(err);
+                alert('Error saving: ' + err.message);
+            }
+        }
+
+        // --- Alerts ... ---
+        function showAlertModal(plantId, plantName, farmerPhone, farmerName, userId) {
+            document.getElementById('alert_plant_id').value = plantId;
+            // Store current farmer's User ID for editing
+            document.getElementById('editContactForm').setAttribute('data-user-id', userId);
+
+            document.getElementById('alertPlantName').textContent = `For: ${plantName}`;
+            currentAlertFarmerNumber = farmerPhone;
+            document.getElementById('alertFarmerName').textContent = farmerName;
+            document.getElementById('alertFarmerPhone').textContent = farmerPhone || 'No Number Linked';
+            document.getElementById('alertForm').reset();
+            document.getElementById('editContactForm').style.display = 'none'; // reset form
+            document.getElementById('alertModal').style.display = 'block';
+        }
+
+        function toggleEditContact() {
+            const form = document.getElementById('editContactForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function saveFarmerContact() {
+            const userId = document.getElementById('editContactForm').getAttribute('data-user-id');
+            const newPhone = document.getElementById('newFarmerPhone').value;
+
+            if (!newPhone) return alert('Enter a valid number');
+
+            try {
+                await api.updateUserContact(userId, { whatsapp_number: newPhone, phone: newPhone });
+                alert('Contact updated! Alerts will now go to: ' + newPhone);
+
+                // Update UI immediately
+                document.getElementById('alertFarmerPhone').textContent = newPhone;
+                currentAlertFarmerNumber = newPhone;
+                document.getElementById('editContactForm').style.display = 'none';
+
+                // Refresh plants list in background to sync
+                loadPlants();
+            } catch (e) {
+                console.error(e);
+                alert('Failed to update: ' + e.message);
+            }
+        }
+        function closeAlertModal() { document.getElementById('alertModal').style.display = 'none'; }
+        function sendWhatsAppNow() {
+            if (!currentAlertFarmerNumber || currentAlertFarmerNumber === 'null' || currentAlertFarmerNumber === 'undefined') {
+                alert('No WhatsApp number available for this farmer.');
+                return;
+            }
+            const message = document.getElementById('alert_message').value;
+            let number = currentAlertFarmerNumber.replace(/[^0-9]/g, '');
+            const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+            window.open(url, '_blank');
+        }
+        async function saveAlert(e) {
+            e.preventDefault();
+            const data = {
+                plant_id: document.getElementById('alert_plant_id').value,
+                type: document.getElementById('alert_type').value,
+                priority: document.getElementById('alert_priority').value,
+                message: document.getElementById('alert_message').value,
+                scheduled_time: document.getElementById('alert_time').value || null
+            };
+            try { await api.createAlert(data); alert('Alert Saved'); closeAlertModal(); } catch (err) { alert(err.message); }
+        }
+
+        // --- Health Logs ... ---
+        function showHealthModal(plantId, plantName) {
+            document.getElementById('health_plant_id').value = plantId;
+            document.getElementById('healthPlantName').textContent = `For: ${plantName}`;
+            document.getElementById('healthModal').style.display = 'block';
+        }
+        function closeHealthModal() { document.getElementById('healthModal').style.display = 'none'; }
+        async function saveHealthLog(e) {
+            e.preventDefault();
+            const inputs = ['log_date', 'soil_moisture', 'soil_ph', 'temperature', 'humidity', 'sunlight_lux', 'growth_height_cm', 'nutrient_n', 'nutrient_p', 'nutrient_k', 'disease_risk'];
+            const data = {};
+            inputs.forEach(id => data[id] = document.getElementById(id).value);
+            const plantId = document.getElementById('health_plant_id').value;
+            try { await api.createHealthLog(plantId, data); alert('Data Saved'); closeHealthModal(); } catch (err) { alert(err.message); }
+        }
+
+        // --- NEW: Calendar Functions ---
+        function showCalendarModal(plantId, plantName) {
+            document.getElementById('calendar_plant_id').value = plantId;
+            document.getElementById('calendarPlantName').textContent = `Plan for: ${plantName}`;
+            loadTasks(plantId);
+            document.getElementById('calendarModal').style.display = 'block';
+        }
+
+        function closeCalendarModal() {
+            document.getElementById('calendarModal').style.display = 'none';
+        }
+
+        async function loadTasks(plantId) {
+            try {
+                const tasks = await api.getTasks(plantId);
+                const list = document.getElementById('taskList');
+                if (tasks.length === 0) { list.innerHTML = '<p>No pending tasks.</p>'; return; }
+
+                list.innerHTML = tasks.map(t => `
+                    <div class="task-item">
+                        <div>
+                            <strong>${t.task_type}</strong> - ${t.description}<br>
+                            <span class="task-date">${new Date(t.task_date).toLocaleDateString()}</span>
+                        </div>
+                        <span class="badge badge-${t.status === 'pending' ? 'medium' : 'success'}">${t.status}</span>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function saveTask(e) {
+            e.preventDefault();
+            const data = {
+                plant_id: document.getElementById('calendar_plant_id').value,
+                task_type: document.getElementById('task_type').value,
+                task_date: document.getElementById('task_date').value,
+                description: document.getElementById('task_desc').value
+            };
+            try {
+                await api.addTask(data);
+                loadTasks(data.plant_id); // Reload list
+                document.getElementById('taskForm').reset();
+            } catch (e) { alert(e.message); }
+        }
+
+        async function generateSchedule() {
+            const plantId = document.getElementById('calendar_plant_id').value;
+            const date = document.getElementById('planting_date').value;
+            if (!date) { alert('Select planting date first.'); return; }
+
+            try {
+                const res = await api.generateSchedule(plantId, date);
+                alert(res.message);
+                loadTasks(plantId);
+            } catch (e) { alert(e.message); }
+        }
+
+        // --- Chat ... ---
+        function toggleChat() {
+            const w = document.getElementById('chatWidget');
+            w.style.display = w.style.display === 'none' ? 'block' : 'none';
+        }
+        async function loadChatContacts() {
+            try {
+                const contacts = await api.getContacts();
+                const sel = document.getElementById('chatContactSelect');
+                contacts.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.user_id;
+                    opt.textContent = c.full_name + ' (' + c.role + ')';
+                    sel.appendChild(opt);
+                });
+            } catch (e) { console.error(e); }
+        }
+        async function loadChat(userId, scroll = true) {
+            if (!userId) return;
+            currentChatUser = userId;
+            try {
+                const msgs = await api.getMessages(userId);
+                const container = document.getElementById('chatMessages');
+                if (msgs.length === 0) { container.innerHTML = '<p>No messages</p>'; return; }
+                container.innerHTML = msgs.map(m => {
+                    const isMe = m.sender_id == user.id || m.sender_id == user.user_id;
+                    return `<div class="chat-bubble ${isMe ? 'sent' : 'received'}">${m.message}</div>`;
+                }).join('');
+                if (scroll) container.scrollTop = container.scrollHeight;
+            } catch (e) { }
+        }
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            if (!input.value) return;
+            await api.sendMessage(currentChatUser, input.value);
+            input.value = '';
+            loadChat(currentChatUser);
+        }
+
+        // --- Report Download (Fixed) ---
+        async function downloadReport(type) {
+            const token = localStorage.getItem('token');
+            if (!token) { alert('Please login first'); return; }
+
+            const endpoint = (type === 'alerts') ? '/api/reports/alerts/csv' : '/api/reports/health/csv';
+
+            try {
+                const response = await fetch('http://localhost:3000' + endpoint, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Download failed ' + response.statusText);
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${type}_report.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error(error);
+                alert('Failed to download report. ' + error.message);
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

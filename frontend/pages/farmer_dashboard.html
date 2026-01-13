@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farmer Dashboard - Plant Health Monitoring</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="manifest" href="../manifest.json">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1 data-i18n="dashboard_title">Farmer Dashboard</h1>
+            <div class="header-right">
+                <!-- Custom Language Switcher -->
+                <div class="language-pill" onclick="toggleProfileMenu()">
+                    <span id="currentLangIcon">🇺🇸</span>
+                    <span id="currentLangLabel">EN</span>
+                </div>
+
+                <!-- Profile Management -->
+                <div class="profile-container">
+                    <div class="profile-trigger" onclick="toggleProfileMenu()">
+                        <div class="avatar" id="userAvatar">U</div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div class="dropdown-header">
+                            <div id="dropdownName" style="font-weight:bold;">User Name</div>
+                            <div id="dropdownEmail" class="email">user@example.com</div>
+                        </div>
+
+                        <div style="padding: 5px 0;">
+                            <div class="dropdown-item" onclick="changeLanguage('en')">
+                                <span class="lang-option">English 🇺🇸 <i class="fas fa-check" id="check-en"></i></span>
+                            </div>
+                            <div class="dropdown-item" onclick="changeLanguage('ta')">
+                                <span class="lang-option">தமிழ் 🇮🇳 <i class="fas fa-check" id="check-ta"
+                                        style="display:none;"></i></span>
+                            </div>
+                        </div>
+
+                        <hr style="border:0; border-top:1px solid #eee; margin: 5px 0;">
+
+                        <button class="dropdown-item" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid" style="display: grid; grid-template-columns: 3fr 1fr; gap: 20px;">
+            <!-- Left Column: Health & Plants -->
+            <div class="main-column">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 data-i18n="my_plots">My Plots</h2>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-secondary" onclick="downloadReport('alerts')"
+                                style="background: #e0f2f1; color: #00695c; padding: 5px 10px; font-size: 0.9em;">
+                                <i class="fas fa-file-csv"></i> Report
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadReport('health')"
+                                style="background: #e0f2f1; color: #00695c; padding: 5px 10px; font-size: 0.9em;">
+                                <i class="fas fa-file-medical"></i> Health
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-main">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <select id="plantSelect" onchange="onPlantSelect()"
+                                style="width: 100%; max-width: 400px; padding: 12px; border-radius: 8px; border: 1px solid #ddd; font-size: 1rem; box-shadow: var(--shadow-sm);">
+                                <option value="">Select a Plot / Plant</option>
+                            </select>
+                            <button class="btn btn-secondary" onclick="window.location.href='plot_comparison.html'"
+                                style="width:auto; padding: 10px 20px; background: #e8f5e9; color: #2e7d32; border: 1px solid #2e7d32; display:flex; align-items:center; gap:8px;">
+                                <i class="fas fa-columns"></i> <span data-i18n="compare_plots">Compare Plots</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="dashboardContent" style="display:none;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3 data-i18n="soil_moisture">Soil Moisture</h3>
+                            <div class="value" id="soilMoisture">--</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3 data-i18n="temperature">Temperature</h3>
+                            <div class="value" id="temp">--</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3 data-i18n="humidity">Humidity</h3>
+                            <div class="value" id="humidity">--</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3 data-i18n="health_score">Health Score</h3>
+                            <div class="value" id="healthScore">--</div>
+                            <small id="healthStatus" style="font-weight:bold;"></small>
+                        </div>
+                    </div>
+
+                    <!-- Weather Info -->
+                    <div class="card" id="weatherCard"
+                        style="margin-top:20px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <h3 style="margin:0; color:#1565c0;"><i class="fas fa-cloud-sun"></i> Local Weather</h3>
+                                <p id="weatherLocation" style="margin:5px 0; font-size:0.9em;"></p>
+                            </div>
+                            <div style="text-align:right;">
+                                <div id="weatherTemp" style="font-size:2em; font-weight:bold; color:#0d47a1;">--°C</div>
+                                <div id="weatherDesc" style="font-size:0.9em; font-weight:bold;">--</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 data-i18n="health_trends">Health & Sensor Trends</h3>
+                            <select id="trendRange" onchange="onPlantSelect()" style="padding:5px; border-radius:5px;">
+                                <option value="week">Last 7 Days</option>
+                                <option value="day">Last 24 Hours</option>
+                                <option value="month">Last 30 Days</option>
+                            </select>
+                        </div>
+                        <canvas id="healthChart" style="max-height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Alerts & Tasks -->
+            <div class="side-column">
+                <div class="card" style="margin-bottom: 20px;">
+                    <h3 data-i18n="upcoming_tasks">📅 Upcoming Tasks</h3>
+                    <div id="taskList" style="max-height: 250px; overflow-y: auto;">
+                        <div style="padding:10px; color:#888;">Select a plant to see tasks.</div>
+                    </div>
+                </div>
+
+                <div id="alertPanel" class="alert-panel"
+                    style="display:none; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom:20px;">
+                    <h3 data-i18n="upcoming_alerts">⚠️ Upcoming Alerts</h3>
+                    <div id="alertList" style="margin-top: 15px;"></div>
+                </div>
+
+                <div class="card" id="timelinePanel" style="display:none;">
+                    <h3 data-i18n="crop_timeline">🌱 Growth Stage Timeline</h3>
+                    <div id="timelineList"
+                        style="margin-top:15px; border-left: 2px solid #2e7d32; padding-left: 15px; margin-left: 10px;">
+                        <!-- Timeline items injected -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Widget -->
+    <button id="chatToggleBtn" onclick="toggleChat()"
+        style="position: fixed; bottom: 20px; right: 20px; background: #2e7d32; color: white; border: none; padding: 15px; border-radius: 50%; width: 60px; height: 60px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000;">
+        <i class="fas fa-comments"></i>
+    </button>
+    <div id="chatWidget"
+        style="display: none; position: fixed; bottom: 90px; right: 20px; width: 350px; background: white; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; overflow: hidden; border: 1px solid #ddd;">
+        <div
+            style="background: #2e7d32; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 1rem; margin: 0;" data-i18n="chat_botanist">Chat with Botanist</h3>
+            <span onclick="toggleChat()" style="cursor: pointer;">&times;</span>
+        </div>
+        <div style="padding: 10px; background: #f5f5f5; border-bottom: 1px solid #eee;">
+            <select id="chatContactSelect" onchange="loadChat(this.value)" style="width: 100%; padding: 5px;">
+                <option value="">Select Botanist...</option>
+            </select>
+        </div>
+        <div id="chatMessages" class="chat-messages"
+            style="height: 300px; padding: 10px; overflow-y: auto; background: white; display: flex; flex-direction: column; gap: 8px;">
+        </div>
+        <div class="chat-input-area"
+            style="padding: 10px; border-top: 1px solid #ddd; display: flex; gap: 5px; background: #f9f9f9;">
+            <input type="text" id="chatInput" placeholder="Type a message..."
+                style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 20px; outline: none;">
+            <button onclick="sendChatMessage()"
+                style="background: #2e7d32; color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer;">
+                <i class="fas fa-paper-plane"></i> </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+        let currentPlantId = null;
+        let myChart = null;
+        let currentChatUser = null;
+        let translations = {};
+
+        if (!checkAuth()) { }
+
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user.role === 'admin') {
+            window.location.href = 'admin_dashboard.html';
+        } else if (user.role !== 'farmer') {
+            window.location.href = 'agronomist_dashboard.html';
+        }
+
+        async function init() {
+            // Setup Profile UI
+            const name = user.full_name || user.name || 'User';
+            document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+            document.getElementById('dropdownName').textContent = name;
+            document.getElementById('dropdownEmail').textContent = user.email || (user.username + '@field.com');
+
+            // Language Init
+            const savedLang = localStorage.getItem('lang') || 'en';
+            updateLangUI(savedLang);
+            await loadTranslations(savedLang);
+
+            loadPlants();
+            loadChatContacts();
+
+            // Close dropdown on outside click
+            window.addEventListener('click', (e) => {
+                if (!e.target.closest('.profile-container') && !e.target.closest('.language-pill')) {
+                    document.getElementById('profileDropdown').classList.remove('active');
+                }
+            });
+
+            setInterval(() => {
+                if (document.getElementById('chatWidget').style.display !== 'none' && currentChatUser) {
+                    loadChat(currentChatUser, false);
+                }
+            }, 5000);
+        }
+
+        function toggleProfileMenu() {
+            document.getElementById('profileDropdown').classList.toggle('active');
+        }
+
+        async function loadTranslations(lang) {
+            try {
+                const res = await fetch(`../locales/${lang}.json`);
+                translations = await res.json();
+                applyTranslations();
+                localStorage.setItem('lang', lang);
+                updateLangUI(lang);
+            } catch (e) { console.error('Lang load error', e); }
+        }
+
+        function updateLangUI(lang) {
+            const isEn = lang === 'en';
+            document.getElementById('currentLangIcon').textContent = isEn ? '🇺🇸' : '🇮🇳';
+            document.getElementById('currentLangLabel').textContent = isEn ? 'EN' : 'TA';
+            document.getElementById('check-en').style.display = isEn ? 'block' : 'none';
+            document.getElementById('check-ta').style.display = isEn ? 'none' : 'block';
+        }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[key]) el.textContent = translations[key];
+            });
+        }
+
+        function changeLanguage(lang) {
+            loadTranslations(lang);
+        }
+
+        async function loadPlants() {
+            try {
+                const plants = await api.getPlants();
+                const select = document.getElementById('plantSelect');
+                if (plants.length === 0) { select.innerHTML = '<option>No plants assigned</option>'; return; }
+                select.innerHTML = '<option value="">Select a Plot / Plant</option>';
+                plants.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.plant_id;
+                    opt.setAttribute('data-location', p.location);
+                    opt.textContent = `${p.plot_name || p.location} - ${p.plant_name} (${p.species})`;
+                    select.appendChild(opt);
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        async function onPlantSelect() {
+            const select = document.getElementById('plantSelect');
+            const id = select.value;
+            if (!id) return;
+            currentPlantId = id;
+            const location = select.options[select.selectedIndex].getAttribute('data-location');
+
+            document.getElementById('dashboardContent').style.display = 'block';
+            document.getElementById('alertPanel').style.display = 'block';
+            document.getElementById('timelinePanel').style.display = 'block';
+
+            await Promise.all([
+                loadHealthData(id),
+                loadAlerts(id),
+                loadTasks(id),
+                loadWeather(location),
+                loadTimeline(id)
+            ]);
+        }
+
+        async function loadTimeline(id) {
+            try {
+                const tasks = await api.getTasks(id);
+                const timeline = document.getElementById('timelineList');
+                // Filter for tasks that have a growth_stage defined
+                const stages = tasks.filter(t => t.growth_stage);
+
+                if (stages.length === 0) {
+                    timeline.innerHTML = '<div style="font-size:0.9em; color:#666;">No stages defined for this crop.</div>';
+                    return;
+                }
+
+                timeline.innerHTML = stages.map(s => {
+                    const isFuture = new Date(s.task_date) > new Date();
+                    return `
+                        <div style="position:relative; margin-bottom: 20px;">
+                            <div style="position:absolute; left:-23px; top:0; width:12px; height:12px; border-radius:50%; background:${isFuture ? '#ccc' : '#2e7d32'}; border: 2px solid white;"></div>
+                            <div style="font-weight:bold; color:${isFuture ? '#888' : '#2e7d32'};">${s.growth_stage}</div>
+                            <div style="font-size:0.8em; color:#666;">${s.description}</div>
+                            <small style="font-size:0.7em; color:#999;">${new Date(s.task_date).toLocaleDateString()}</small>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) { console.log('Timeline load failed'); }
+        }
+
+        async function loadWeather(location) {
+            try {
+                const data = await api.getWeather(location);
+                document.getElementById('weatherLocation').textContent = data.location;
+                document.getElementById('weatherTemp').textContent = `${data.temp_max}°C`;
+                document.getElementById('weatherDesc').textContent = `${data.condition} (Rain: ${Math.round(data.rain_probability * 100)}%)`;
+            } catch (e) { console.log('Weather load failed'); }
+        }
+
+        async function loadHealthData(id) {
+            try {
+                const range = document.getElementById('trendRange').value;
+                const [logs, trends] = await Promise.all([
+                    api.getHealthLogs(id, 1),
+                    api.getTrends(id, range)
+                ]);
+
+                if (logs.length > 0) {
+                    const latest = logs[0];
+                    document.getElementById('soilMoisture').textContent = latest.soil_moisture + '%';
+                    document.getElementById('temp').textContent = latest.temperature + '°C';
+                    document.getElementById('humidity').textContent = latest.humidity + '%';
+
+                    const score = Math.round(latest.health_score || 0);
+                    const scoreEl = document.getElementById('healthScore');
+                    const statusEl = document.getElementById('healthStatus');
+                    scoreEl.textContent = score;
+
+                    if (score >= 80) { scoreEl.style.color = 'green'; statusEl.textContent = 'GOOD'; statusEl.style.color = 'green'; }
+                    else if (score >= 50) { scoreEl.style.color = 'orange'; statusEl.textContent = 'MODERATE'; statusEl.style.color = 'orange'; }
+                    else { scoreEl.style.color = 'red'; statusEl.textContent = 'CRITICAL'; statusEl.style.color = 'red'; }
+                }
+
+                if (trends.length > 0) {
+                    renderChart(trends);
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadTasks(id) {
+            try {
+                const tasks = await api.getTasks(id);
+                const list = document.getElementById('taskList');
+                if (tasks.length === 0) {
+                    list.innerHTML = '<div style="padding:10px">No upcoming tasks.</div>';
+                    return;
+                }
+                list.innerHTML = tasks.map(t => `
+                    <div style="padding: 10px; border-bottom: 1px solid #eee; background: #fff;">
+                         <div style="font-weight:bold; color: #2e7d32;">${t.task_type}</div>
+                         <div style="font-size:0.9em;">${t.description}</div>
+                         <small style="color:#666;">Due: ${new Date(t.task_date).toLocaleDateString()}</small>
+                    </div>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        function renderChart(trends) {
+            const ctx = document.getElementById('healthChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: trends.map(t => t.log_date),
+                    datasets: [
+                        { label: 'Moisture (%)', data: trends.map(t => t.avg_moisture), borderColor: '#2e7d32', backgroundColor: 'rgba(46, 125, 50, 0.1)', fill: true, tension: 0.3 },
+                        { label: 'Temp (°C)', data: trends.map(t => t.avg_temp), borderColor: '#ff6f00', tension: 0.3 },
+                        { label: 'Health Score', data: trends.map(t => t.avg_health), borderColor: '#1565c0', borderDash: [5, 5], tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } },
+                    scales: { y: { beginAtZero: true, max: 100 } }
+                }
+            });
+        }
+        async function loadAlerts(id) {
+            try {
+                const alerts = await api.getAlerts(id);
+                const list = document.getElementById('alertList');
+                const pMap = { critical: 3, high: 2, medium: 1, low: 0 };
+                alerts.sort((a, b) => (pMap[b.priority] || 0) - (pMap[a.priority] || 0));
+                if (alerts.length === 0) { list.innerHTML = '<p>No active alerts.</p>'; return; }
+                list.innerHTML = alerts.map(a => `
+                    <div class="alert-item ${a.priority || 'medium'}" style="margin-bottom:10px; padding:10px; border-left: 4px solid ${getPriorityColor(a.priority)}; background: #f9f9f9;">
+                         <div style="display:flex; justify-content:space-between;">
+                            <strong>${a.type ? a.type.toUpperCase() : 'ALERT'}</strong>
+                            <span class="badge badge-${a.priority || 'medium'}">${a.priority || 'medium'}</span>
+                        </div>
+                        <p style="margin: 5px 0;">${a.message}</p>
+                        <small style="color:#666;">${new Date(a.created_at).toLocaleString()}</small>
+                    </div>
+                `).join('');
+            } catch (err) { console.error(err); }
+        }
+        function getPriorityColor(p) {
+            if (p === 'critical') return '#dc3545';
+            if (p === 'high') return '#ffc107';
+            return '#28a745';
+        }
+        function toggleChat() {
+            const w = document.getElementById('chatWidget');
+            w.style.display = w.style.display === 'none' ? 'block' : 'none';
+        }
+        async function loadChatContacts() {
+            try {
+                const contacts = await api.getContacts();
+                const sel = document.getElementById('chatContactSelect');
+                contacts.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.user_id;
+                    opt.textContent = c.full_name;
+                    sel.appendChild(opt);
+                });
+            } catch (e) { }
+        }
+        function displayMessage(m) {
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            const isMe = m.sender_id === user.id || m.sender_id === user.user_id;
+
+            div.style.alignSelf = isMe ? 'flex-end' : 'flex-start';
+            div.style.background = isMe ? '#e8f5e9' : '#f5f5f5';
+            div.style.padding = '8px 12px';
+            div.style.borderRadius = '15px';
+            div.style.maxWidth = '80%';
+            div.style.fontSize = '0.9rem';
+            div.style.marginBottom = '10px'; // Added for spacing
+
+            let content = `<div>${m.message}</div>`;
+            if (m.sensor_summary) {
+                content += `<div style="font-size:0.7em; margin-top:5px; padding-top:5px; border-top:1px solid #ddd; color:#2e7d32;">
+                    <i class="fas fa-microchip"></i> ${m.sensor_summary}
+                </div>`;
+            }
+
+            div.innerHTML = content;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+        async function loadChat(userId, scroll = true) {
+            if (!userId) return;
+            currentChatUser = userId;
+            try {
+                const msgs = await api.getMessages(userId);
+                const container = document.getElementById('chatMessages');
+                container.innerHTML = ''; // Clear existing messages
+                if (msgs.length === 0) { container.innerHTML = '<p>No messages</p>'; return; }
+                msgs.forEach(m => displayMessage(m));
+                if (scroll) container.scrollTop = container.scrollHeight;
+            } catch (e) { }
+        }
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            if (!input.value) return;
+            await api.sendMessage(currentChatUser, input.value);
+            input.value = '';
+            loadChat(currentChatUser);
+        }
+
+        // --- Report Download ---
+        async function downloadReport(type) {
+            const token = localStorage.getItem('token');
+            if (!token) { alert('Please login first'); return; }
+
+            const endpoint = (type === 'alerts') ? '/api/reports/alerts/csv' : '/api/reports/health/csv';
+
+            try {
+                const response = await fetch('http://localhost:3000' + endpoint, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Download failed ' + response.statusText);
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${type}_report.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error(error);
+                alert('Failed to download report. ' + error.message);
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

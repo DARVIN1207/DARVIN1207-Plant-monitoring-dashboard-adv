@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plot Comparison - Plant Health Monitoring</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>📊 Multi-Plot Comparison</h1>
+            <button class="btn btn-secondary" onclick="window.location.href='farmer_dashboard.html'">Back to
+                Dashboard</button>
+        </div>
+
+        <div class="card">
+            <h3>Crop Health Overview</h3>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                    <thead>
+                        <tr style="background: #f5f5f5; text-align: left;">
+                            <th style="padding: 12px; border-bottom: 2px solid #ddd;">Plot Name</th>
+                            <th style="padding: 12px; border-bottom: 2px solid #ddd;">Moisture</th>
+                            <th style="padding: 12px; border-bottom: 2px solid #ddd;">Temperature</th>
+                            <th style="padding: 12px; border-bottom: 2px solid #ddd;">Health Score</th>
+                            <th style="padding: 12px; border-bottom: 2px solid #ddd;">Actions Needed</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparisonTableBody">
+                        <!-- Data injected here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        if (!checkAuth()) { }
+
+        async function loadComparison() {
+            try {
+                const data = await api.getComparison();
+                const tbody = document.getElementById('comparisonTableBody');
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px; text-align:center;">No plot data found.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.map(p => {
+                    const score = Math.round(p.health_score || 0);
+                    const statusColor = score >= 80 ? '#2e7d32' : score >= 50 ? '#f57c00' : '#d32f2f';
+                    const scoreLabel = score >= 80 ? 'Good' : score >= 50 ? 'Moderate' : 'Critical';
+
+                    return `
+                        <tr style="border-bottom: 1px solid #eee;">
+                            <td style="padding: 12px;"><strong>${p.plant_name}</strong><br><small style="color:#666">${p.log_date || 'No logs'}</small></td>
+                            <td style="padding: 12px;">${p.soil_moisture ? p.soil_moisture + '%' : '--'}</td>
+                            <td style="padding: 12px;">${p.temperature ? p.temperature + '°C' : '--'}</td>
+                            <td style="padding: 12px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span style="font-weight:bold; color:${statusColor}">${score}%</span>
+                                    <span class="badge" style="background:${statusColor}; color:white; font-size:0.75em; padding:2px 6px; border-radius:4px;">${scoreLabel}</span>
+                                </div>
+                            </td>
+                            <td style="padding: 12px;">
+                                ${score < 50 ? '<span style="color:#d32f2f; font-weight:bold;"><i class="fas fa-exclamation-triangle"></i> Urgent Review</span>' : 'Normal'}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error('Comparison load error', e);
+            }
+        }
+
+        loadComparison();
+    </script>
+</body>
+
+</html>
