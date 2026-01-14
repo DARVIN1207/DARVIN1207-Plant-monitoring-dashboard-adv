@@ -1,3 +1,8 @@
+ WEB LIVE AT:
+<a href="https://darvin1207.github.io/DARVIN1207-Plant-monitoring-dashboard-adv/" target="_blank">Click Here</a>
+
+
+
 # Plant Health Monitoring System
 
 A robust, full-stack web application designed to help farmers and botanists monitor crop health in real-time. This system facilitates data-driven decision-making through sensor logs, automated alerts, and direct communication channels.
